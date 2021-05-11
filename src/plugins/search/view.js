@@ -8,20 +8,24 @@ class SearchView {
    * @event BookReader:SearchResultsCleared - when the search results nav gets cleared
    * @event BookReader:ToggleSearchMenu - when search results menu should toggle
    */
-  constructor(params) {
-    if (!params.selector) {
+  constructor({
+    selector,
+    br,
+    cancelSearch = () => {}
+  }) {
+    if (!selector) {
       console.warn('BookReader::Search - SearchView must be passed a valid CSS selector');
       return;
     }
-
-    this.br = params.br;
+    this.br = br;
 
     // Search results are returned as a text blob with the hits wrapped in
     // triple mustaches. Hits occasionally include text beyond the search
     // term, so everything within the staches is captured and wrapped.
     this.matcher = new RegExp('{{{(.+?)}}}', 'g');
     this.matches = [];
-    this.cacheDOMElements(params.selector);
+    this.cancelSearch = cancelSearch;
+    this.cacheDOMElements(selector);
     this.bindEvents();
   }
 
@@ -395,11 +399,19 @@ class SearchView {
   toggleSearchPending(bool) {
     this.dom.searchPending.classList.toggle('visible', bool);
     if (bool) {
-      this.br.showProgressPopup("Search results will appear below...");
+      this.br.showProgressPopup("Search results will appear below...", () => this.progressPopupClosed());
     }
     else {
       this.br.removeProgressPopup();
     }
+  }
+
+  /**
+   * Primary callback when user cancels search popup
+   */
+  progressPopupClosed() {
+    this.toggleSearchPending();
+    this.cancelSearch();
   }
 
   renderErrorModal() {
